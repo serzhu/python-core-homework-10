@@ -113,17 +113,17 @@ class AddressBook(UserDict):
     
     def iterator(self, n=0):
         data = list(self.data.values())
+        print(data)
         if n > len(data): 
             raise ValueError('Wrong num of records')
         i = 0
-        while i < n:
-            yield data[i]
-            i += 1
-        
+        while i < len(data):
+            yield ' | '.join(str(item) for item in data[i:i+n])
+            i += n   
 
 # Створення нової адресної книги
 book = AddressBook()
-names = ["a","b","c","d"]
+names = ["a","b","c","d","e","f","g","h"]
 
 for name in names:
     name_record = Record(f"{name}")
