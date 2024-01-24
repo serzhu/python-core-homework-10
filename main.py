@@ -1,5 +1,7 @@
 from collections import UserDict
 from datetime import datetime, date
+import copy
+import csv
 
 class Field:
     def __init__(self, value):
@@ -29,6 +31,9 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self):
         self.__value = None
+    
+    def __str__(self):
+        return str(self.value.strftime("%d.%m.%Y"))
 
     @property
     def value(self):
@@ -98,12 +103,14 @@ class Record:
             return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
     
 class AddressBook(UserDict):
-
+           
     def add_record(self, record):
         self.data[record.name.value] = record
-    
+
     def find(self, name):
-        if name in self.data.keys():
+        if name not in self.data.keys():
+            raise ValueError('Name not in Book')
+        else:
             record = self.data[name]
             return record
                 
@@ -113,32 +120,77 @@ class AddressBook(UserDict):
     
     def iterator(self, n=0):
         data = list(self.data.values())
-        print(data)
         if n > len(data): 
             raise ValueError('Wrong num of records')
         i = 0
         while i < len(data):
             yield ' | '.join(str(item) for item in data[i:i+n])
             i += n   
+    
+    def save(self, filename):
+        with open(filename, 'w', newline ='') as file:
+            data=copy.deepcopy(list(self.data.values()))        # make  deep copy of list of book values 
+            fieldsnames = vars(data[0]).keys()                  # set fileldsnames of csv file
+            csv_writer = csv.DictWriter(file, fieldnames = fieldsnames, delimiter=';')
+            csv_writer.writeheader()
+            for row in data:
+                phones = ','.join(str(phone) for phone in row.phones)    # change phone numbers to human readable view
+                vars(row)['phones'] = phones
+                csv_writer.writerow(rowdict=vars(row))
+    
+    def load(self, filename):
+        with open(filename, 'r', newline ='') as file:
+            csv_reader = csv.DictReader(file, delimiter=';')
+            for row in csv_reader:
+                name_record = Record(f"{row['name']}")          #for every 'name' value  in row create Record object
+                for item in row['phones'].split(','):           #for every phone in 'phones' value add Phone objects to Record
+                    name_record.add_phone(f'{item}')            
+                if row['birthday'] != '':                       #add 'birthday' value if exists to Record 
+                    name_record.add_birthday(row['birthday'])
+                self.add_record(name_record)                    #add Record to Book
+        return self
+    
+    def findall(self, value=''):
+        for item in list(self.data.values()):                   
+            name_str = item.name.value                          #get str value name
+            phone_str = ','.join(str(phone) for phone in item.phones)  #get str value phones
+            if name_str.find(value) != -1 or phone_str.find(value) != -1:   #find in str values
+                print(item)
 
-# Створення нової адресної книги
+
 book = AddressBook()
-names = ["a","b","c","d","e","f","g","h"]
-
-for name in names:
+names1 = ["asd","qwe",]
+names2 = ["asdfg","qwerty"]
+for name in names1:
+    name_record = Record(f"{name}")
+    name_record.add_phone("1111111111")
+    name_record.add_phone("2222222222")
+    name_record.add_birthday("10.01.1985")
+    book.add_record(name_record)
+for name in names2:
     name_record = Record(f"{name}")
     name_record.add_phone("1234567890")
-    name_record.add_birthday("10.01.1985")
-    book.add_record (name_record)
+    name_record.add_phone("0987654321")
+    book.add_record(name_record)
 
-for name, record in book.data.items():
-    print(record)
-print('----------------')
+# for name, record in book.data.items():
+#     print(record)
+# print('----------------')
 
-a = book.find('a')
-a.days_to_birthday()
-print('----------------')
+# # a = book.find('a')
+# # a.days_to_birthday()
+# # print('----------------')
 
-for i in book.iterator(2):
-    print(i)
+# # for i in book.iterator(2):
+# #     print(i)
 
+# #print(book)
+book.save('book.csv')
+book1 = AddressBook()
+book1.load('book.csv')
+#c = book1.find('c')
+#c.add_birthday("10.01.1986")
+book1.save('book.csv')
+# for name, record in book1.data.items():
+#     print(record)
+book1.findall('asdf')
